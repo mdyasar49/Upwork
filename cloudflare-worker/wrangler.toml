@@ -1,0 +1,11 @@
+name = "upwork-lead-intelligence"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+account_id = "303d82a19e674d1b0ea492c9c0775b73"
+
+[vars]
+GOOGLE_SHEET_ID = "1qLxmNGGeuFuXnQnH4ITtnEGdaUpfzquIaf7wDHJpdD0"
+DEFAULT_LOCATIONS = "Australia,India"
+SERVICE_ACCOUNT_EMAIL = "leadscraper@splendid-planet-504710-d0.iam.gserviceaccount.com"
