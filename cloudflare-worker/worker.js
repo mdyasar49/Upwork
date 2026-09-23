@@ -252,26 +252,7 @@ async function fetchUpworkLeads(keywords, locations, limit = 30) {
     }
   }
 
-  // Fallback enriched data if feed is cold
-  if (leads.length === 0) {
-    for (let i = 1; i <= Math.min(limit, 8); i++) {
-      const kw = keywords[(i - 1) % keywords.length];
-      const loc = locations[(i - 1) % locations.length];
-      leads.push({
-        job_number: i,
-        job_title: `${kw} Specialist & Architect for Cloud Automation`,
-        job_url: `https://www.upwork.com/jobs/~01${Math.random().toString(36).substr(2, 16)}`,
-        posted_on: new Date().toLocaleDateString("en-AU"),
-        budget: `$${1500 * i}`,
-        location: loc,
-        skills: `${kw}, REST API, Cloud Infrastructure, Full Stack`,
-        email: `hiring.manager@${kw.toLowerCase().replace(/[^a-z]/g, "")}-project.com`,
-        phone: loc === "Australia" ? `+61 4${Math.floor(10000000 + Math.random() * 90000000)}` : `+91 9${Math.floor(100000000 + Math.random() * 900000000)}`,
-        description: `Urgent requirement for senior ${kw} developer in ${loc}. Full scope project implementation.`
-      });
-    }
-  }
-
+  // If feed is empty/blocked on edge, return empty leads list with informative notice
   return leads;
 }
 
@@ -295,47 +276,52 @@ export default {
         // 2. Google Sheets Authentication & Sync
         let sheetIdVal = 0;
         let syncedCount = 0;
-        try {
-          const accessToken = await getGoogleAuthToken();
-          sheetIdVal = await ensureWorksheet(accessToken, tabName);
+        if (leads.length > 0) {
+          try {
+            const accessToken = await getGoogleAuthToken();
+            sheetIdVal = await ensureWorksheet(accessToken, tabName);
 
-          // Map 28 CRM columns
-          const dateStr = new Date().toLocaleDateString("en-AU");
-          const rows = leads.map(l => [
-            dateStr,
-            "Upwork",
-            l.job_title.slice(0, 120),
-            "",
-            "",
-            "Hiring",
-            "Manager",
-            "Upwork Verified Client",
-            "Hiring Manager / Project Owner",
-            l.email,
-            l.phone,
-            l.phone,
-            "Software & Web Development",
-            "Verified Client",
-            l.skills.slice(0, 250),
-            "New",
-            "Hot",
-            l.budget,
-            "",
-            l.location,
-            "",
-            l.location,
-            l.job_url,
-            "Job Requirements Brief & Scope Document",
-            "Upwork Verified Client Feed",
-            "Upwork Scraper (Cloudflare Edge)",
-            "Pending",
-            `Budget: ${l.budget} | Skills: ${l.skills} | Scope: ${l.description.slice(0, 600)}`
-          ]);
+            // Map 28 CRM columns with safe phone formatting
+            const dateStr = new Date().toLocaleDateString("en-AU");
+            const rows = leads.map(l => {
+              const safePhone = l.phone ? `'${l.phone}` : "";
+              return [
+                dateStr,
+                "Upwork",
+                (l.job_title || "").slice(0, 120),
+                "",
+                "",
+                "Hiring",
+                "Manager",
+                "Upwork Verified Client",
+                "Hiring Manager / Project Owner",
+                l.email || "",
+                safePhone,
+                safePhone,
+                "Software & Web Development",
+                "Verified Client",
+                (l.skills || "").slice(0, 250),
+                "New",
+                "Hot",
+                l.budget || "Open / Negotiable",
+                "",
+                l.location || "Australia",
+                "",
+                l.location || "Australia",
+                l.job_url || "",
+                "Job Requirements Brief & Scope Document",
+                "Upwork Verified Client Feed",
+                "Upwork Scraper (Cloudflare Edge)",
+                "Pending",
+                `Budget: ${l.budget} | Skills: ${l.skills} | Scope: ${(l.description || "").slice(0, 600)}`
+              ];
+            });
 
-          await appendRowsToSheet(accessToken, tabName, rows);
-          syncedCount = rows.length;
-        } catch (sheetErr) {
-          console.error("Sheet sync error:", sheetErr);
+            await appendRowsToSheet(accessToken, tabName, rows);
+            syncedCount = rows.length;
+          } catch (sheetErr) {
+            console.error("Sheet sync error:", sheetErr);
+          }
         }
 
         const tabUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit#gid=${sheetIdVal}`;
@@ -346,7 +332,8 @@ export default {
           synced_count: syncedCount,
           tab_name: tabName,
           sheet_url: tabUrl,
-          leads: leads
+          leads: leads,
+          message: leads.length === 0 ? "Upwork Edge feeds require desktop scraper for full DOM rendering. Use local Web Dashboard (start_search_dashboard.bat)." : "Successfully synchronized leads to Google Sheets."
         }), {
           headers: { "Content-Type": "application/json" }
         });

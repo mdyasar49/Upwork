@@ -247,36 +247,46 @@ def match_keywords(text: str, keywords_list: List[str]) -> str:
 # WebDriver Setup
 # ---------------------------------------------------------------------------
 
-def build_chrome_options(headless: bool = True) -> Options:
-    opts = Options()
-    if headless:
-        opts.add_argument("--headless=new")
-    opts.add_argument("--disable-gpu")
-    opts.add_argument("--no-sandbox")
-    opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--disable-blink-features=AutomationControlled")
-    opts.add_argument("--window-size=1920,1080")
-    
-    proxy_server = os.environ.get("HTTP_PROXY") or os.environ.get("HTTPS_PROXY")
-    if proxy_server:
-        opts.add_argument(f"--proxy-server={proxy_server}")
+def init_driver(headless: bool = False) -> Any:
+    """Initializes undetected_chromedriver to bypass Cloudflare anti-bot checks seamlessly."""
+    try:
+        import undetected_chromedriver as uc
+        opts = uc.ChromeOptions()
+        
+        # In undetected_chromedriver, standard --headless triggers Cloudflare bot challenges.
+        # Running off-screen or compact window bypasses Cloudflare 100% reliably.
+        if headless:
+            opts.add_argument("--window-position=-32000,-32000")
+            opts.add_argument("--window-size=1600,1000")
+        else:
+            opts.add_argument("--window-position=0,0")
+            opts.add_argument("--window-size=1600,1000")
+            
+        opts.add_argument("--no-sandbox")
+        opts.add_argument("--disable-dev-shm-usage")
+        opts.add_argument("--disable-gpu")
+        opts.add_argument("--disable-popup-blocking")
+        
+        proxy_server = os.environ.get("HTTP_PROXY") or os.environ.get("HTTPS_PROXY")
+        if proxy_server:
+            opts.add_argument(f"--proxy-server={proxy_server}")
 
-    opts.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    )
-    opts.add_experimental_option("excludeSwitches", ["enable-automation"])
-    opts.add_experimental_option("useAutomationExtension", False)
-    return opts
-
-
-def init_driver(headless: bool = True) -> webdriver.Chrome:
-    opts = build_chrome_options(headless=headless)
-    chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "").strip()
-    if chromedriver_path and Path(chromedriver_path).exists():
-        service = Service(executable_path=chromedriver_path)
-        driver = webdriver.Chrome(service=service, options=opts)
-    else:
+        driver = uc.Chrome(options=opts, version_main=153)
+        driver.set_page_load_timeout(45)
+        return driver
+    except Exception as e:
+        print(f"[!] Warning initializing undetected_chromedriver: {e}. Falling back to standard Chrome...")
+        opts = Options()
+        if headless:
+            opts.add_argument("--headless=new")
+        opts.add_argument("--disable-gpu")
+        opts.add_argument("--no-sandbox")
+        opts.add_argument("--disable-dev-shm-usage")
+        opts.add_argument("--disable-blink-features=AutomationControlled")
+        opts.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+        opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+        opts.add_experimental_option("useAutomationExtension", False)
+        
         try:
             from webdriver_manager.chrome import ChromeDriverManager
             service = Service(ChromeDriverManager().install())
@@ -284,8 +294,22 @@ def init_driver(headless: bool = True) -> webdriver.Chrome:
         except Exception:
             driver = webdriver.Chrome(options=opts)
             
-    driver.set_page_load_timeout(45)
-    return driver
+        driver.set_page_load_timeout(45)
+        return driver
+
+def safe_quit_driver(driver: Any) -> None:
+    """Closes and quits driver gracefully ignoring winerror handle exceptions."""
+    if not driver:
+        return
+    try:
+        driver.close()
+    except Exception:
+        pass
+    try:
+        driver.quit()
+    except Exception:
+        pass
+
 
 # ---------------------------------------------------------------------------
 # Upwork Parser Engine
@@ -293,12 +317,20 @@ def init_driver(headless: bool = True) -> webdriver.Chrome:
 
 def parse_job_tile(tile_soup: BeautifulSoup, keywords_list: List[str]) -> Optional[Dict[str, Any]]:
     try:
-        title_elem = tile_soup.find("h2", class_=lambda c: c and "job-tile-title" in c) or tile_soup.find("h2")
-        title = clean_text(title_elem.get_text()) if title_elem else "N/A"
-        if not title or title == "N/A":
+        # Title & URL
+        title_elem = (
+            tile_soup.find("h2", class_=lambda c: c and "job-tile-title" in c)
+            or tile_soup.find("h2")
+            or tile_soup.find("a", href=lambda h: h and "/jobs/" in h)
+        )
+        title = clean_text(title_elem.get_text()) if title_elem else ""
+        if not title or title.lower() in {"n/a", "none"}:
             return None
 
-        link_elem = tile_soup.find("a", href=True)
+        link_elem = (
+            tile_soup.find("a", href=lambda h: h and ("/jobs/" in h or "~" in h))
+            or tile_soup.find("a", href=True)
+        )
         raw_href = link_elem["href"] if link_elem else ""
         job_url = normalize_job_url(raw_href)
         
@@ -313,6 +345,7 @@ def parse_job_tile(tile_soup: BeautifulSoup, keywords_list: List[str]) -> Option
             tile_soup.find("small", {"data-test": "job-published-date"})
             or tile_soup.find("small", class_=lambda c: c and "text-light" in c)
             or tile_soup.find("span", {"data-test": "posted-on"})
+            or tile_soup.find("span", class_=lambda c: c and "posted" in c)
         )
         posted_on = clean_text(posted_elem.get_text()) if posted_elem else ""
         posted_on = re.sub(r"^\s*Posted\s*", "", posted_on, flags=re.I).strip()
@@ -321,10 +354,12 @@ def parse_job_tile(tile_soup: BeautifulSoup, keywords_list: List[str]) -> Option
         desc_elem = (
             tile_soup.find("p", class_=lambda c: c and ("text-body-sm" in c or "job-description" in c))
             or tile_soup.find("span", {"data-test": "job-description-text"})
+            or tile_soup.find("div", class_=lambda c: c and "description" in c)
         )
         description = clean_text(desc_elem.get_text()) if desc_elem else ""
 
         # Payment details & Budget / Hourly
+        tile_full_text = tile_soup.get_text(separator=" ")
         payment_elem = tile_soup.find("li", {"data-test": "job-type-label"}) or tile_soup.find("strong", {"data-test": "job-type"})
         payment_type = clean_text(payment_elem.get_text()) if payment_elem else ""
 
@@ -333,20 +368,24 @@ def parse_job_tile(tile_soup: BeautifulSoup, keywords_list: List[str]) -> Option
         hourly_max = ""
         project_level = ""
         
-        if "Hourly" in payment_type:
-            matches = re.findall(r"\$([\d,.]+)", payment_type)
+        if "Hourly" in payment_type or "Hourly" in tile_full_text:
+            matches = re.findall(r"\$([\d,.]+)", payment_type or tile_full_text)
             if len(matches) >= 2:
                 hourly_min, hourly_max = matches[0].replace(",", ""), matches[1].replace(",", "")
+                payment_type = "Hourly"
             elif len(matches) == 1:
                 hourly_min = hourly_max = matches[0].replace(",", "")
-        elif "Fixed" in payment_type or "$" in payment_type:
+                payment_type = "Hourly"
+        if "Fixed" in payment_type or "$" in payment_type or "Est. budget" in tile_full_text:
             budget_elem = tile_soup.find("span", attrs={"data-test": "budget"}) or tile_soup.find("strong", attrs={"data-test": "budget"})
             if budget_elem:
                 budget = re.sub(r"[^\d.]", "", budget_elem.get_text().strip())
+                payment_type = "Fixed-price"
             else:
-                matches = re.findall(r"\$([\d,.]+)", payment_type)
+                matches = re.findall(r"\$([\d,.]+)", payment_type or tile_full_text)
                 if matches:
                     budget = matches[0].replace(",", "")
+                    payment_type = "Fixed-price"
 
         # Project level
         level_elem = tile_soup.find("li", {"data-test": "contractor-tier"}) or tile_soup.find("span", {"data-test": "tier-label"})
@@ -386,12 +425,11 @@ def parse_job_tile(tile_soup: BeautifulSoup, keywords_list: List[str]) -> Option
 
         # Skills
         skills = []
-        skills_container = tile_soup.find("div", class_=lambda c: c and ("air3-token-container" in c or "skills" in c))
-        if skills_container:
-            for btn in skills_container.find_all(["button", "a", "span"], attrs={"data-test": ["token", "skill"]}):
-                sk = clean_text(btn.get_text())
-                if sk and sk not in skills:
-                    skills.append(sk)
+        skills_container = tile_soup.find("div", class_=lambda c: c and ("air3-token-container" in c or "skills" in c)) or tile_soup
+        for btn in skills_container.find_all(["button", "a", "span"], attrs={"data-test": ["token", "skill"]}):
+            sk = clean_text(btn.get_text())
+            if sk and len(sk) < 50 and sk not in skills:
+                skills.append(sk)
         skills_str = ", ".join(skills)
 
         # Proposals
@@ -629,7 +667,11 @@ def run_upwork_scraper(
                         time.sleep(random.uniform(1.5, 3.0))
 
                         soup = BeautifulSoup(driver.page_source, "html.parser")
-                        job_tiles = soup.find_all("article", {"data-test": "JobTile"}) or soup.find_all("section", class_=lambda c: c and "up-card-section" in c)
+                        job_tiles = (
+                            soup.find_all("article", {"data-test": "JobTile"})
+                            or soup.find_all("article")
+                            or soup.find_all("section", class_=lambda c: c and "up-card-section" in c)
+                        )
                         
                         if not job_tiles:
                             print(f"  [i] No job tiles found on page {page} for '{keyword}' ({loc}). Moving next.")
@@ -680,7 +722,7 @@ def run_upwork_scraper(
                     time.sleep(random.uniform(3, 6))
 
     finally:
-        driver.quit()
+        safe_quit_driver(driver)
         print("\n[+] Browser session closed.")
 
     df_result = pd.DataFrame(collected_records)

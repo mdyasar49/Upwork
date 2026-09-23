@@ -122,6 +122,16 @@ def existing_sheet_job_urls(worksheet: gspread.Worksheet) -> Set[str]:
         return set()
 
 
+def sanitize_sheet_cell(val: Any) -> str:
+    """Formats cell values so Google Sheets doesn't treat leading '+' or '=' as formula errors."""
+    if val is None:
+        return ""
+    s = str(val).strip()
+    if s.startswith("+") or s.startswith("="):
+        return f"'{s}"
+    return s
+
+
 def map_upwork_record_to_crm_row(rec: Dict[str, Any]) -> List[str]:
     """Maps an Upwork scraped job record to the 28 Google Sheet CRM columns."""
     date_str = datetime.now().strftime("%d/%m/%Y")
@@ -186,11 +196,12 @@ def map_upwork_record_to_crm_row(rec: Dict[str, Any]) -> List[str]:
     url = str(rec.get("Job_URL", "")).strip()
     email = str(rec.get("Email_Address", "")).strip()
     phone = str(rec.get("Contact_Number", "")).strip()
+    safe_phone = sanitize_sheet_cell(phone)
 
     return [
         date_str,                                              # 1. Date
         lead_source,                                           # 2. Lead Source
-        title[:120],                                           # 3. Company / Job Subject
+        sanitize_sheet_cell(title[:120]),                      # 3. Company / Job Subject
         year_val,                                              # 4. Company Founded Year
         year_val,                                              # 5. Account Created Year
         first_name,                                            # 6. First Name
@@ -198,8 +209,8 @@ def map_upwork_record_to_crm_row(rec: Dict[str, Any]) -> List[str]:
         client_name,                                           # 8. Customer Name
         "Hiring Manager / Project Owner",                      # 9. Designation / Title
         email,                                                 # 10. Email
-        phone,                                                 # 11. Phone Number
-        phone,                                                 # 12. Mobile Number
+        safe_phone,                                            # 11. Phone Number
+        safe_phone,                                            # 12. Mobile Number
         "Software & Web Development",                          # 13. Industry
         str(rec.get("Client_Hires", "Verified Client")),       # 14. Company Size
         skills[:250],                                          # 15. Key Technologies / Skills

@@ -138,7 +138,7 @@ def worker_scrape_task(
     emit_event("log", {"message": f"🚀 Starting Search for {len(keywords)} keywords across {len(locations)} locations..."})
 
     try:
-        from upwork_scraper import init_driver, parse_job_tile, scrape_job_details_page
+        from upwork_scraper import init_driver, parse_job_tile, scrape_job_details_page, safe_quit_driver
         from urllib.parse import quote
         from bs4 import BeautifulSoup
         import random
@@ -149,98 +149,103 @@ def worker_scrape_task(
         total_valid = 0
         existing_urls = set()
 
-        for loc in locations:
-            if total_valid >= limit:
-                break
-            scrape_state["current_location"] = loc
-            emit_event("log", {"message": f"🌍 Target Location: {loc.upper()}"})
-
-            for kw_idx, keyword in enumerate(keywords, start=1):
+        try:
+            for loc in locations:
                 if total_valid >= limit:
                     break
-                scrape_state["current_keyword"] = keyword
-                emit_event("status_update", {
-                    "keyword": keyword,
-                    "location": loc,
-                    "progress": total_valid,
-                    "limit": limit
-                })
-                emit_event("log", {"message": f"🔍 Searching: '{keyword}' ({loc})"})
+                scrape_state["current_location"] = loc
+                emit_event("log", {"message": f"🌍 Target Location: {loc.upper()}"})
 
-                for page in range(1, 6):
+                for kw_idx, keyword in enumerate(keywords, start=1):
                     if total_valid >= limit:
                         break
+                    scrape_state["current_keyword"] = keyword
+                    emit_event("status_update", {
+                        "keyword": keyword,
+                        "location": loc,
+                        "progress": total_valid,
+                        "limit": limit
+                    })
+                    emit_event("log", {"message": f"🔍 Searching: '{keyword}' ({loc})"})
 
-                    if loc and loc.lower() != "all":
-                        search_url = f"https://www.upwork.com/nx/search/jobs/?location={quote(loc)}&q={quote(keyword)}&sort=recency&page={page}"
-                    else:
-                        search_url = f"https://www.upwork.com/nx/search/jobs/?q={quote(keyword)}&sort=recency&page={page}"
-
-                    try:
-                        driver.get(search_url)
-                        time.sleep(random.uniform(4, 6))
-
-                        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
-                        time.sleep(1)
-                        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                        time.sleep(random.uniform(1.5, 2.5))
-
-                        soup = BeautifulSoup(driver.page_source, "html.parser")
-                        job_tiles = soup.find_all("article", {"data-test": "JobTile"}) or soup.find_all("section", class_=lambda c: c and "up-card-section" in c)
-
-                        if not job_tiles:
+                    for page in range(1, 6):
+                        if total_valid >= limit:
                             break
 
-                        for tile in job_tiles:
-                            if total_valid >= limit:
+                        if loc and loc.lower() != "all":
+                            search_url = f"https://www.upwork.com/nx/search/jobs/?location={quote(loc)}&q={quote(keyword)}&sort=recency&page={page}"
+                        else:
+                            search_url = f"https://www.upwork.com/nx/search/jobs/?q={quote(keyword)}&sort=recency&page={page}"
+
+                        try:
+                            driver.get(search_url)
+                            time.sleep(random.uniform(4, 6))
+
+                            driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
+                            time.sleep(1)
+                            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                            time.sleep(random.uniform(1.5, 2.5))
+
+                            soup = BeautifulSoup(driver.page_source, "html.parser")
+                            job_tiles = (
+                                soup.find_all("article", {"data-test": "JobTile"})
+                                or soup.find_all("article")
+                                or soup.find_all("section", class_=lambda c: c and "up-card-section" in c)
+                            )
+
+                            if not job_tiles:
                                 break
 
-                            job_data = parse_job_tile(tile, keywords)
-                            if not job_data:
-                                continue
+                            for tile in job_tiles:
+                                if total_valid >= limit:
+                                    break
 
-                            job_url = job_data["Job_URL"]
-                            if job_url in existing_urls:
-                                continue
+                                job_data = parse_job_tile(tile, keywords)
+                                if not job_data:
+                                    continue
 
-                            if deep and job_url != "N/A":
-                                emit_event("log", {"message": f"  -> Deep scraping job details: {job_data['Job_Title'][:40]}..."})
-                                deep_details = scrape_job_details_page(driver, job_url, keywords)
-                                job_data.update({k: v for k, v in deep_details.items() if v})
+                                job_url = job_data["Job_URL"]
+                                if job_url in existing_urls:
+                                    continue
 
-                            total_valid += 1
-                            job_data["Job_Number"] = total_valid
-                            if not job_data.get("Client_Location"):
-                                job_data["Client_Location"] = loc
+                                if deep and job_url != "N/A":
+                                    emit_event("log", {"message": f"  -> Deep scraping job details: {job_data['Job_Title'][:40]}..."})
+                                    deep_details = scrape_job_details_page(driver, job_url, keywords)
+                                    job_data.update({k: v for k, v in deep_details.items() if v})
 
-                            existing_urls.add(job_url)
-                            collected_records.append(job_data)
-                            scrape_state["found_jobs"].append(job_data)
-                            scrape_state["progress"] = total_valid
+                                total_valid += 1
+                                job_data["Job_Number"] = total_valid
+                                if not job_data.get("Client_Location"):
+                                    job_data["Client_Location"] = loc
 
-                            # Incremental CSV append
-                            df_single = pd.DataFrame([job_data])
-                            for col in OUTPUT_COLUMNS:
-                                if col not in df_single.columns:
-                                    df_single[col] = ""
-                            df_single = df_single[OUTPUT_COLUMNS]
-                            write_header = not session_csv.exists() or session_csv.stat().st_size == 0
-                            df_single.to_csv(session_csv, mode="a", header=write_header, index=False, encoding="utf-8-sig")
+                                existing_urls.add(job_url)
+                                collected_records.append(job_data)
+                                scrape_state["found_jobs"].append(job_data)
+                                scrape_state["progress"] = total_valid
 
-                            # Emit lead card to frontend
-                            emit_event("new_lead", {
-                                "job": job_data,
-                                "progress": total_valid,
-                                "total": limit,
-                            })
-                            emit_event("log", {"message": f"  ✅ Extracted #{total_valid}: {job_data['Job_Title'][:50]} | {job_data['Budget'] or job_data['Hourly_Min']}"})
+                                # Incremental CSV append
+                                df_single = pd.DataFrame([job_data])
+                                for col in OUTPUT_COLUMNS:
+                                    if col not in df_single.columns:
+                                        df_single[col] = ""
+                                df_single = df_single[OUTPUT_COLUMNS]
+                                write_header = not session_csv.exists() or session_csv.stat().st_size == 0
+                                df_single.to_csv(session_csv, mode="a", header=write_header, index=False, encoding="utf-8-sig")
 
-                    except Exception as pe:
-                        emit_event("log", {"message": f"  ⚠️ Page Notice: {pe}"})
+                                # Emit lead card to frontend
+                                emit_event("new_lead", {
+                                    "job": job_data,
+                                    "progress": total_valid,
+                                    "total": limit,
+                                })
+                                emit_event("log", {"message": f"  ✅ Extracted #{total_valid}: {job_data['Job_Title'][:50]} | {job_data['Budget'] or job_data['Hourly_Min']}"})
 
-                    time.sleep(random.uniform(2, 4))
+                        except Exception as pe:
+                            emit_event("log", {"message": f"  ⚠️ Page Notice: {pe}"})
 
-        driver.quit()
+                        time.sleep(random.uniform(2, 4))
+        finally:
+            safe_quit_driver(driver)
 
         # Google Sheets New Tab Sync
         if sync_sheet and sheet_id and collected_records:
