@@ -126,8 +126,8 @@ def normalize_job_url(raw_url: str) -> str:
     elif not raw_url.startswith("http"):
         raw_url = "https://www.upwork.com/" + raw_url.lstrip("/")
     
-    clean_url = re.sub(r"(\~[a-zA-Z0-9]+)[^/]*.*", r"\1", raw_url)
-    clean_url = clean_url.split("?")[0]
+    # Strip tracking parameters and anchors, keeping the exact job path and ~ID
+    clean_url = raw_url.split("?")[0].split("#")[0].rstrip("/")
     return clean_url
 
 
