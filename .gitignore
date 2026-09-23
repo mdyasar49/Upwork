@@ -1,0 +1,19 @@
+# Outputs and Logs
+Output/*.csv
+Output/*.xlsx
+logs/*.log
+
+# Environment & Credentials
+.env
+Script/.env
+Script/credentials/*.json
+Script/credentials/chrome_profile/
+
+# Python & Checkpoints
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db

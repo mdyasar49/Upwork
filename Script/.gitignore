@@ -1,0 +1,14 @@
+# Environment & Credentials
+.env
+credentials/google_service_account.json
+credentials/chrome_profile/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+
+# System & OS
+.DS_Store
+Thumbs.db

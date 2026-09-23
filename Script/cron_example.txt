@@ -1,0 +1,18 @@
+# Upwork Scraper Cron & Scheduler Examples
+
+# --- Linux Crontab Examples (crontab -e) ---
+
+# Run daily at 7:00 AM (headless mode, limit 50 jobs)
+0 7 * * * cd /path/to/infonix/Upwork/Script && /usr/bin/python3 daily_run.py --limit 50 >> ../logs/cron_daily.log 2>&1
+
+# Run every 6 hours
+0 */6 * * * cd /path/to/infonix/Upwork/Script && /usr/bin/python3 daily_run.py --limit 30 >> ../logs/cron_6h.log 2>&1
+
+# Deep page scrape every Sunday at midnight
+0 0 * * 0 cd /path/to/infonix/Upwork/Script && /usr/bin/python3 upwork_scraper.py --deep --limit 100 >> ../logs/cron_deep.log 2>&1
+
+
+# --- Windows Task Scheduler / PowerShell ---
+
+# Run via PowerShell command:
+# powershell -ExecutionPolicy Bypass -Command "cd d:\infonix\Upwork\Script; python daily_run.py --limit 50"

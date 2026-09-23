@@ -1,0 +1,39 @@
+# Intent & Requirement phrases
+I am looking for
+Seeking
+need someone
+i need
+require
+implementation of
+to develop/build
+we need to develop
+sells
+we offer
+
+# Website / Contact indicators
+.com
+.org
+.net
+.io
+.ai
+.co
+.in
+.edu
+.gov
+.au
+site
+https://
+http://
+website
+www.
+skype
+whatapp
+whatsapp
+telegram
+discord
+email
+phone
+contact
+
+# Sample base search URL
+# https://www.upwork.com/nx/search/jobs/?location=Australia&sort=recency&q=

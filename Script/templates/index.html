@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upwork Lead Intelligence & Search Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0b0f19;
+            --bg-surface: #111827;
+            --bg-card: rgba(17, 24, 39, 0.85);
+            --bg-input: #1a2234;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-active: #6366f1;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --accent-green: #10b981;
+            --accent-cyan: #06b6d4;
+            --accent-amber: #f59e0b;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Top Navbar */
+        header {
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-badge {
+            background: linear-gradient(135deg, #10b981, #06b6d4, #6366f1);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-title span {
+            background: linear-gradient(90deg, #10b981, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sheet-link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .sheet-link-btn:hover {
+            background: rgba(16, 185, 129, 0.25);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 460px 1fr;
+            gap: 2rem;
+            flex: 1;
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .glass-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            backdrop-filter: blur(16px);
+            padding: 1.75rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-header h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Form Inputs */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .form-label small {
+            color: var(--accent-cyan);
+            font-weight: normal;
+        }
+
+        .form-control {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        textarea.form-control {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        /* Preset Chips */
+        .chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .chip-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        /* Switch row */
+        .toggles-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 4px;
+        }
+
+        .toggle-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .toggle-box input[type="checkbox"] {
+            accent-color: var(--primary);
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .toggle-box span {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Start Button */
+        .btn-launch {
+            background: linear-gradient(135deg, #10b981, #06b6d4, #6366f1);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+            margin-top: 8px;
+        }
+
+        .btn-launch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.45);
+        }
+
+        .btn-launch:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Status & Terminal Panel */
+        .results-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Live Progress Bar */
+        .progress-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .progress-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            height: 10px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #10b981, #06b6d4, #6366f1);
+            height: 100%;
+            width: 0%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        /* Terminal Logs */
+        .terminal-card {
+            background: #060911;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            max-height: 200px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            color: #d1d5db;
+        }
+
+        .terminal-log-line {
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        /* Leads Data Table */
+        .leads-table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-header-bar {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+            max-height: 480px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 12px 16px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge-budget {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: inline-block;
+        }
+
+        .badge-contact {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent-cyan);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            display: inline-block;
+            margin: 2px 0;
+        }
+
+        .job-title-link {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .job-title-link:hover {
+            color: var(--accent-cyan);
+            text-decoration: underline;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            display: inline-block;
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-box">
+            <div class="logo-badge">UP</div>
+            <div>
+                <div class="brand-title">Upwork <span>Lead Intelligence</span></div>
+                <small style="color: var(--text-muted); font-size: 0.75rem;">CRM Automated Pipeline & Live Search</small>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <span class="pulse-dot"></span>
+            <span style="font-size: 0.85rem; color: var(--text-secondary);">Ready</span>
+            <a id="headerSheetBtn" href="{{ sheet_url }}" target="_blank" class="sheet-link-btn">
+                📊 Open Google Sheet CRM
+            </a>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <!-- Left: Search Control Panel -->
+        <div class="glass-card">
+            <div class="card-header">
+                <h2>🎯 Manual Search Setup</h2>
+                <small style="color: var(--accent-cyan);">{{ total_keywords_count }} Default Keywords</small>
+            </div>
+
+            <!-- Keywords Input -->
+            <div class="form-group">
+                <label class="form-label">
+                    <span>Search Keywords (Comma Separated)</span>
+                </label>
+                <textarea id="kwInput" class="form-control" placeholder="e.g. AI Integration, React.js, Python, Twilio, Shopify, Web Scraping">AI Integration, React.js, Python Developer, Twilio Voice</textarea>
+                <div class="chips-container">
+                    <button type="button" class="chip-btn" onclick="addKeyword('AI Integration')">+ AI Integration</button>
+                    <button type="button" class="chip-btn" onclick="addKeyword('React.js')">+ React.js</button>
+                    <button type="button" class="chip-btn" onclick="addKeyword('Python / Django')">+ Python</button>
+                    <button type="button" class="chip-btn" onclick="addKeyword('Twilio Automation')">+ Twilio</button>
+                    <button type="button" class="chip-btn" onclick="addKeyword('Shopify Developer')">+ Shopify</button>
+                    <button type="button" class="chip-btn" onclick="addKeyword('Web Scraping')">+ Web Scraping</button>
+                </div>
+            </div>
+
+            <!-- Locations Input -->
+            <div class="form-group">
+                <label class="form-label">
+                    <span>Target Locations (Comma Separated)</span>
+                    <small>Default: Australia, India</small>
+                </label>
+                <input type="text" id="locInput" class="form-control" value="Australia, India" placeholder="Australia, India, United States">
+                <div class="chips-container">
+                    <button type="button" class="chip-btn" onclick="setLoc('Australia, India')">🇦🇺 Australia & 🇮🇳 India</button>
+                    <button type="button" class="chip-btn" onclick="setLoc('Australia')">🇦🇺 Australia Only</button>
+                    <button type="button" class="chip-btn" onclick="setLoc('India')">🇮🇳 India Only</button>
+                    <button type="button" class="chip-btn" onclick="setLoc('United States, Australia')">🇺🇸 US & 🇦🇺 AU</button>
+                </div>
+            </div>
+
+            <!-- New Google Sheet Tab Name -->
+            <div class="form-group">
+                <label class="form-label">
+                    <span>New Google Sheet Tab Name</span>
+                    <small>Auto-creates fresh tab</small>
+                </label>
+                <input type="text" id="tabInput" class="form-control" placeholder="e.g. Search_Shopify_AU_IN">
+            </div>
+
+            <!-- Job Limit -->
+            <div class="form-group">
+                <label class="form-label">
+                    <span>Max Jobs to Extract</span>
+                    <span id="limitVal">30 Jobs</span>
+                </label>
+                <input type="range" id="limitInput" min="5" max="150" step="5" value="30" class="form-control" style="padding: 4px;" oninput="document.getElementById('limitVal').innerText = this.value + ' Jobs'">
+            </div>
+
+            <!-- Toggles -->
+            <div class="toggles-grid">
+                <label class="toggle-box">
+                    <input type="checkbox" id="syncSheetCheck" checked>
+                    <span>Sync to Sheets</span>
+                </label>
+                <label class="toggle-box">
+                    <input type="checkbox" id="deepScrapeCheck">
+                    <span>Deep Page Scrape</span>
+                </label>
+                <label class="toggle-box">
+                    <input type="checkbox" id="headedCheck">
+                    <span>Visible Chrome UI</span>
+                </label>
+            </div>
+
+            <!-- Launch Button -->
+            <button type="button" id="launchBtn" class="btn-launch" onclick="startSearch()">
+                🚀 Start Search & Create Sheet Tab
+            </button>
+        </div>
+
+        <!-- Right: Live Results & Real-time Stream -->
+        <div class="results-panel">
+            
+            <!-- Progress Section -->
+            <div class="progress-box">
+                <div class="progress-header">
+                    <span id="statusLabel">Status: Ready for search</span>
+                    <span id="progressCount">0 / 0 Leads Extracted</span>
+                </div>
+                <div class="progress-track">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+            </div>
+
+            <!-- Terminal Logs -->
+            <div class="terminal-card" id="terminalBox">
+                <div class="terminal-log-line" style="color: var(--accent-green);">[System Ready] Web Dashboard connected. Ready to start custom manual search.</div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="leads-table-container">
+                <div class="table-header-bar">
+                    <h3 style="font-size: 1rem; font-weight: 700;">📋 Extracted Leads Live Stream</h3>
+                    <div id="activeTabBadge" style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 600;"></div>
+                </div>
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Job Title</th>
+                                <th>Budget / Rate</th>
+                                <th>Location</th>
+                                <th>Extracted Contacts</th>
+                                <th>Skills</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leadsTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                                    No search currently running. Enter keywords on the left and click "Start Search".
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Auto-suggest Tab Name with timestamp
+        function generateDefaultTabName() {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const dStr = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+            return `Search_${dStr}`;
+        }
+        document.getElementById('tabInput').value = generateDefaultTabName();
+
+        function addKeyword(kw) {
+            const input = document.getElementById('kwInput');
+            const current = input.value.trim();
+            if (current && !current.includes(kw)) {
+                input.value = current + ', ' + kw;
+            } else if (!current) {
+                input.value = kw;
+            }
+        }
+
+        function setLoc(loc) {
+            document.getElementById('locInput').value = loc;
+        }
+
+        function logToTerminal(msg) {
+            const box = document.getElementById('terminalBox');
+            const line = document.createElement('div');
+            line.className = 'terminal-log-line';
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            box.appendChild(line);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        let totalTarget = 30;
+        let currentProgress = 0;
+
+        function startSearch() {
+            const keywords = document.getElementById('kwInput').value.trim();
+            const locations = document.getElementById('locInput').value.trim();
+            const tabName = document.getElementById('tabInput').value.trim() || generateDefaultTabName();
+            const limit = parseInt(document.getElementById('limitInput').value) || 30;
+            const syncSheet = document.getElementById('syncSheetCheck').checked;
+            const deep = document.getElementById('deepScrapeCheck').checked;
+            const headed = document.getElementById('headedCheck').checked;
+
+            if (!keywords) {
+                alert('Please enter at least one keyword.');
+                return;
+            }
+
+            totalTarget = limit;
+            currentProgress = 0;
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressCount').innerText = `0 / ${limit} Leads`;
+            document.getElementById('statusLabel').innerText = `Status: Scraping in progress for '${tabName}'...`;
+            document.getElementById('activeTabBadge').innerText = `Target Tab: ${tabName}`;
+            document.getElementById('leadsTableBody').innerHTML = '';
+            document.getElementById('launchBtn').disabled = true;
+            document.getElementById('launchBtn').innerText = '⏳ Searching & Extracting...';
+
+            logToTerminal(`Initiating search with tab '${tabName}', limit=${limit}...`);
+
+            fetch('/api/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    keywords: keywords,
+                    locations: locations,
+                    tab_name: tabName,
+                    limit: limit,
+                    sync_sheet: syncSheet,
+                    deep: deep,
+                    headed: headed
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Error: ' + data.error);
+                    document.getElementById('launchBtn').disabled = false;
+                    document.getElementById('launchBtn').innerText = '🚀 Start Search & Create Sheet Tab';
+                }
+            })
+            .catch(err => {
+                logToTerminal('API Error: ' + err);
+                document.getElementById('launchBtn').disabled = false;
+                document.getElementById('launchBtn').innerText = '🚀 Start Search & Create Sheet Tab';
+            });
+        }
+
+        // Server-Sent Events (SSE) Listener for Real-Time Streaming
+        const eventSource = new EventSource('/api/events');
+        eventSource.onmessage = function(e) {
+            if (!e.data) return;
+            const payload = JSON.parse(e.data);
+            const evt = payload.event;
+            const data = payload.data;
+
+            if (evt === 'log') {
+                logToTerminal(data.message);
+            } else if (evt === 'new_lead') {
+                const job = data.job;
+                currentProgress = data.progress;
+                const pct = Math.min(100, (currentProgress / totalTarget) * 100);
+                document.getElementById('progressFill').style.width = `${pct}%`;
+                document.getElementById('progressCount').innerText = `${currentProgress} / ${totalTarget} Leads`;
+
+                const tbody = document.getElementById('leadsTableBody');
+                const tr = document.createElement('tr');
+                
+                let contactsHtml = '';
+                if (job.Email_Address) contactsHtml += `<div class="badge-contact">✉️ ${job.Email_Address}</div>`;
+                if (job.Contact_Number) contactsHtml += `<div class="badge-contact">📞 ${job.Contact_Number}</div>`;
+                if (!contactsHtml) contactsHtml = `<span style="color: var(--text-muted);">-</span>`;
+
+                tr.innerHTML = `
+                    <td><strong>#${job.Job_Number}</strong></td>
+                    <td>
+                        <a href="${job.Job_URL}" target="_blank" class="job-title-link">${job.Job_Title}</a>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">ID: ${job.Job_ID}</div>
+                    </td>
+                    <td><span class="badge-budget">${job.Budget ? '$' + job.Budget : (job.Hourly_Min ? '$' + job.Hourly_Min + '/hr' : 'Open')}</span></td>
+                    <td>📍 ${job.Client_Location || 'Australia'}</td>
+                    <td>${contactsHtml}</td>
+                    <td style="color: var(--text-secondary); font-size: 0.8rem;">${(job.Skills || '').substring(0, 40)}...</td>
+                `;
+                tbody.prepend(tr);
+            } else if (evt === 'sheet_synced') {
+                logToTerminal(`🎉 New Google Sheet Tab created: '${data.tab_name}' with ${data.rows_added} rows.`);
+                document.getElementById('headerSheetBtn').href = data.sheet_url;
+            } else if (evt === 'complete') {
+                document.getElementById('statusLabel').innerText = `Status: Completed (${data.total_extracted} jobs scraped)`;
+                document.getElementById('launchBtn').disabled = false;
+                document.getElementById('launchBtn').innerText = '🚀 Start New Search & Create Sheet Tab';
+                document.getElementById('tabInput').value = generateDefaultTabName();
+                logToTerminal(`🏁 Session complete. Google Sheet Tab: ${data.tab_name}`);
+            } else if (evt === 'error') {
+                document.getElementById('statusLabel').innerText = `Status: Error encountered`;
+                document.getElementById('launchBtn').disabled = false;
+                document.getElementById('launchBtn').innerText = '🚀 Retry Search';
+            }
+        };
+    </script>
+</body>
+</html>
