@@ -408,14 +408,33 @@ function renderHTML() {
     <div class="brand-box">
       <div class="logo-badge">UP</div>
       <div>
-        <div class="brand-title">Upwork <span>Cloud Intelligence</span></div>
-        <small style="color: var(--text-muted); font-size: 0.75rem;">Hosted on Cloudflare Edge (Account: 303d82a19e674d1b0ea492c9c0775b73)</small>
+        <div class="brand-title">Upwork <span>Lead Intelligence</span></div>
+        <small style="color: var(--text-muted); font-size: 0.75rem;">Cloud Sync Hub & Desktop Automation Suite</small>
       </div>
     </div>
-    <a id="sheetBtn" href="https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit" target="_blank" class="sheet-btn">
-      📊 Open Google Sheet CRM
-    </a>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <a href="http://localhost:5000" target="_blank" style="padding: 8px 16px; border-radius: 8px; background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); text-decoration: none; font-size: 0.875rem; font-weight: 600;">
+        ⚡ Local Desktop Dashboard (http://localhost:5000)
+      </a>
+      <a id="sheetBtn" href="https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit" target="_blank" class="sheet-btn">
+        📊 Open Google Sheet CRM
+      </a>
+    </div>
   </header>
+
+  <div style="max-width: 1400px; margin: 1.5rem auto 0; padding: 0 1.5rem;">
+    <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+      <div>
+        <strong style="color: #818cf8; font-size: 0.95rem;">💡 Desktop Browser Automation (Selenium / Undetected Chrome)</strong>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 4px;">
+          Upwork blocks cloud datacenter IPs from direct scraping. For 100% guaranteed live job scraping with direct Upwork URLs, run <code style="background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px; color:#fff;">start_search_dashboard.bat</code> on your PC.
+        </p>
+      </div>
+      <a href="http://localhost:5000" target="_blank" style="background: #6366f1; color: #fff; text-decoration: none; font-size: 0.85rem; font-weight: 700; padding: 8px 16px; border-radius: 8px;">
+        Open Local UI
+      </a>
+    </div>
+  </div>
 
   <div class="main-grid">
     <div class="glass-card">
@@ -472,7 +491,7 @@ function renderHTML() {
           <tbody id="tbody">
             <tr>
               <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">
-                Click "Start Cloud Search" to extract leads and push to a new Google Sheet Tab.
+                Click "Start Cloud Search" or use <a href="http://localhost:5000" target="_blank" style="color:var(--accent-green);">Local Desktop Dashboard</a> for full live Selenium scraping.
               </td>
             </tr>
           </tbody>
@@ -519,20 +538,28 @@ function renderHTML() {
 
           const tbody = document.getElementById('tbody');
           tbody.innerHTML = '';
-          data.leads.forEach(l => {
-            const tr = document.createElement('tr');
-            let contacts = '';
-            if (l.email) contacts += '<div class="badge-contact">✉️ ' + l.email + '</div> ';
-            if (l.phone) contacts += '<div class="badge-contact">📞 ' + l.phone + '</div>';
-            if (!contacts) contacts = '<span style="color:var(--text-muted);">-</span>';
+          if (data.leads.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 2.5rem;">' +
+              '<div style="font-size:1.1rem; font-weight:700; color:#f59e0b; margin-bottom:8px;">⚠️ Cloud Serverless Blocked by Upwork Bot Protection</div>' +
+              '<p style="color:var(--text-muted); font-size:0.85rem; max-width:600px; margin:0 auto 12px;">Upwork blocks cloud datacenter IPs from direct scraping. To scrape live jobs with exact URLs and contacts, open your local desktop dashboard:</p>' +
+              '<a href="http://localhost:5000" target="_blank" style="display:inline-block; background:#10b981; color:#fff; font-weight:700; padding:8px 18px; border-radius:8px; text-decoration:none;">🚀 Open Local Selenium Dashboard (http://localhost:5000)</a>' +
+              '</td></tr>';
+          } else {
+            data.leads.forEach(l => {
+              const tr = document.createElement('tr');
+              let contacts = '';
+              if (l.email) contacts += '<div class="badge-contact">✉️ ' + l.email + '</div> ';
+              if (l.phone) contacts += '<div class="badge-contact">📞 ' + l.phone + '</div>';
+              if (!contacts) contacts = '<span style="color:var(--text-muted);">-</span>';
 
-            tr.innerHTML = '<td><strong>#' + l.job_number + '</strong></td>' +
-              '<td><a href="' + l.job_url + '" target="_blank" style="color:#fff; text-decoration:none; font-weight:600;">' + l.job_title + '</a></td>' +
-              '<td><span class="badge-budget">' + l.budget + '</span></td>' +
-              '<td>📍 ' + l.location + '</td>' +
-              '<td>' + contacts + '</td>';
-            tbody.appendChild(tr);
-          });
+              tr.innerHTML = '<td><strong>#' + l.job_number + '</strong></td>' +
+                '<td><a href="' + l.job_url + '" target="_blank" style="color:#fff; text-decoration:none; font-weight:600;">' + l.job_title + '</a></td>' +
+                '<td><span class="badge-budget">' + l.budget + '</span></td>' +
+                '<td>📍 ' + l.location + '</td>' +
+                '<td>' + contacts + '</td>';
+              tbody.appendChild(tr);
+            });
+          }
         } else {
           alert('Error: ' + data.error);
         }
