@@ -68,6 +68,8 @@ Upwork/
     ├── upwork_freelancer_scraper.py       # Client contract history scraper
     ├── freelancer_scraper.py              # Freelancer.com project scraper
     ├── clean_upwork_jobs.py               # Data cleaner & phone/email normalizer
+    ├── scrape_job_detail.py               # Deep Job & Client intelligence parser (Reviews & Feedback)
+    ├── sync_to_business_leads.py          # 31-column Google Sheets CRM Sync with deduplication
     ├── sheets_sync.py                     # Google Sheets 28-column CRM live sync
     ├── upwork_pipeline.py                 # Continuous 800+ leads batch pipeline
     ├── deploy_check.py                    # Pre-flight environment & sheets check
@@ -82,8 +84,11 @@ Upwork/
 | Method | Command / Action | Description |
 | :--- | :--- | :--- |
 | **Web Screen Dashboard** | Double click [`start_search_dashboard.bat`](file:///d:/infonix/Upwork/start_search_dashboard.bat) | Visual browser UI to search & create new Google Sheet tabs without terminal |
+| **Deep Job Intelligence** | `python Script/scrape_job_detail.py` | Extracts full client name from reviews, past contracts & detailed budget |
+| **31-Col CRM Sheet Sync** | `python Script/sync_to_business_leads.py` | Synchronizes leads into Google Sheets 'Upwork Leads' tab with all 31 mandatory columns |
 | **Interactive Terminal** | `python manual_search.py` | Step-by-step console prompts for custom keywords & tab name |
 | **CLI Search** | `python manual_search.py --keywords "Shopify" --locations "Australia" --tab "Shopify_AU"` | One-liner command for custom search & new tab creation |
 | **Daily Cron Automation** | `python daily_run.py --limit 50` | Automatically scrapes default 1,502 keywords across Australia & India and syncs to Sheet1 |
 | **800+ Leads Pipeline** | `python upwork_pipeline.py --target 800` | Continuous batch quota lead generation |
 | **Pre-flight Check** | `python deploy_check.py` | Validates Chrome, dependencies, credentials & Google Sheets access |
+

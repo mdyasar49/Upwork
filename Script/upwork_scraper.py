@@ -243,6 +243,26 @@ def match_keywords(text: str, keywords_list: List[str]) -> str:
             found.append(kw)
     return ", ".join(list(dict.fromkeys(found)))
 
+
+def extract_client_name_from_feedback(text: str) -> str:
+    """Intelligently identifies client name from freelancer reviews / feedback text."""
+    if not text:
+        return ""
+    stop_words = {
+        "this", "the", "a", "an", "him", "her", "them", "such", "our", "all",
+        "very", "great", "excellent", "good", "job", "work", "project", "client",
+        "freelancer", "communication", "time", "pleasure", "experience", "payment"
+    }
+    matches = re.findall(
+        r"(?:working with|pleasure working with|time working with|thanks to|thanks|thank you)\s+([A-Z][a-z]+)",
+        text,
+        re.I
+    )
+    for name in matches:
+        if name.lower() not in stop_words and len(name) > 1:
+            return name
+    return ""
+
 # ---------------------------------------------------------------------------
 # WebDriver Setup
 # ---------------------------------------------------------------------------
@@ -422,6 +442,8 @@ def parse_job_tile(tile_soup: BeautifulSoup, keywords_list: List[str]) -> Option
         client_name_el = tile_soup.find("strong", {"data-test": "client-name"})
         if client_name_el:
             client_name = clean_text(client_name_el.get_text())
+        if not client_name:
+            client_name = extract_client_name_from_feedback(tile_full_text)
 
         # Skills
         skills = []
